@@ -5,8 +5,8 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -54,6 +54,18 @@ func authMountTuneSchema() *schema.Schema {
 					Optional:    true,
 					Description: "List of headers to whitelist and pass from the request to the backend.",
 					Elem:        &schema.Schema{Type: schema.TypeString},
+				},
+				"allowed_response_headers": {
+					Type:        schema.TypeList,
+					Optional:    true,
+					Description: "List of headers to whitelist and allowing a plugin to include them in the response.",
+					Elem:        &schema.Schema{Type: schema.TypeString},
+				},
+				"token_type": {
+					Type:         schema.TypeString,
+					Optional:     true,
+					Description:  "Specifies the type of tokens that should be returned by the mount.",
+					ValidateFunc: validation.StringInSlice([]string{"default-service", "default-batch", "service", "batch"}, false),
 				},
 			},
 		},

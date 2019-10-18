@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func JsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
@@ -140,4 +140,33 @@ func ShortDur(d time.Duration) string {
 		s = s[:len(s)-2]
 	}
 	return s
+}
+
+func SliceHasElement(list []interface{}, search interface{}) (bool, int) {
+	for i, ele := range list {
+		if reflect.DeepEqual(ele, search) {
+			return true, i
+		}
+	}
+	return false, -1
+}
+
+func SliceAppendIfMissing(list []interface{}, search interface{}) []interface{} {
+	if found, _ := SliceHasElement(list, search); !found {
+		return append(list, search)
+	}
+
+	return list
+}
+
+// Warning: Slice order will be modified
+func SliceRemoveIfPresent(list []interface{}, search interface{}) []interface{} {
+	if found, index := SliceHasElement(list, search); found {
+		// Set the index we found to be the last item
+		list[index] = list[len(list)-1]
+		// Return slice sans last item
+		return list[:len(list)-1]
+	}
+
+	return list
 }

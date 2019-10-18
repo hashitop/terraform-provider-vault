@@ -2,8 +2,8 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/vault/api"
 	"strconv"
 	"testing"
@@ -259,7 +259,6 @@ func TestResourceToken_renew(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
 				),
-				ExpectNonEmptyPlan: true,
 			},
 			{
 				Config:  testResourceTokenConfig_renew(),

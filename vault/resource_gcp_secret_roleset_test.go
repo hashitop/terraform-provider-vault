@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform/helper/acctest"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -22,6 +22,8 @@ func TestGCPSecretRoleset(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	roleset := acctest.RandomWithPrefix("tf-test")
 	credentials, project := getTestGCPCreds(t)
+
+	serviceAccountEmail := ""
 
 	initialRole := "roles/viewer"
 	initialConfig, initialHash := testGCPSecretRoleset_access_token(backend, roleset, credentials, project, initialRole)
@@ -40,6 +42,7 @@ func TestGCPSecretRoleset(t *testing.T) {
 				Config: initialConfig,
 				Check: resource.ComposeTestCheckFunc(
 					testGCPSecretRoleset_attrs(backend, roleset),
+					testGCPSecretRoleset_serviceAccountEmail(&serviceAccountEmail, false),
 					resource.TestCheckResourceAttr("vault_gcp_secret_backend.test", "path", backend),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "roleset", roleset),
@@ -54,9 +57,16 @@ func TestGCPSecretRoleset(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:            "vault_gcp_secret_backend.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"credentials"},
+			},
+			{
 				Config: updatedConfig,
 				Check: resource.ComposeTestCheckFunc(
 					testGCPSecretRoleset_attrs(backend, roleset),
+					testGCPSecretRoleset_serviceAccountEmail(&serviceAccountEmail, true),
 					resource.TestCheckResourceAttr("vault_gcp_secret_backend.test", "path", backend),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "roleset", roleset),
@@ -74,6 +84,7 @@ func TestGCPSecretRoleset(t *testing.T) {
 				Config: keyConfig,
 				Check: resource.ComposeTestCheckFunc(
 					testGCPSecretRoleset_attrs(backend, roleset),
+					testGCPSecretRoleset_serviceAccountEmail(&serviceAccountEmail, true),
 					resource.TestCheckResourceAttr("vault_gcp_secret_backend.test", "path", backend),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "roleset", roleset),
@@ -251,6 +262,31 @@ func testGCPSecretRoleset_attrs(backend, roleset string) resource.TestCheckFunc 
 	}
 }
 
+func testGCPSecretRoleset_serviceAccountEmail(serviceAccountEmail *string, checkDifferent bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["vault_gcp_secret_roleset.test"]
+		if resourceState == nil {
+			return fmt.Errorf("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return fmt.Errorf("resource not found in state")
+		}
+
+		newEmail := instanceState.Attributes["service_account_email"]
+
+		if checkDifferent {
+			if newEmail == *serviceAccountEmail {
+				return fmt.Errorf("expected service account email to change but did not")
+			}
+		}
+
+		*serviceAccountEmail = newEmail
+		return nil
+	}
+}
+
 func testGCPSecretRolesetDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
@@ -288,9 +324,8 @@ resource "vault_gcp_secret_roleset" "test" {
   token_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
 
   binding {
-	resource = "%s"
-
-	roles = ["%s"]
+    resource = "%s"
+    roles = ["%s"]
   }
 }
 `, backend, credentials, roleset, project, resource, role)
@@ -322,9 +357,8 @@ resource "vault_gcp_secret_roleset" "test" {
   project = "%s"
 
   binding {
-	resource = "%s"
-
-	roles = ["%s"]
+    resource = "%s"
+    roles = ["%s"]
   }
 }
 `, backend, credentials, roleset, project, resource, role)

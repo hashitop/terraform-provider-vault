@@ -4,18 +4,19 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/vault/api"
 	"strings"
 )
 
 func pkiSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendCreate,
-		Read:   pkiSecretBackendRead,
-		Update: pkiSecretBackendUpdate,
-		Delete: pkiSecretBackendDelete,
-		Exists: pkiSecretBackendExists,
+		DeprecationMessage: `This resource duplicates "vault_mount" and will be removed in the next major release.`,
+		Create:             pkiSecretBackendCreate,
+		Read:               pkiSecretBackendRead,
+		Update:             pkiSecretBackendUpdate,
+		Delete:             pkiSecretBackendDelete,
+		Exists:             pkiSecretBackendExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
